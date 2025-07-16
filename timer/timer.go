@@ -54,18 +54,18 @@ func (t *Timer) Start() {
 		defer close(t.updateCh)
 
 		for {
-			// if the seconds reach limit stop the timer
 			if t.limit != 0 && t.seconds >= t.limit {
-				fmt.Println("Timer finished limit:", t.seconds)
+				t.ticker = nil
 				return
 			}
-
+			// if the seconds reach limit stop the timer
 			// select between stopCh and ticker
 			select {
 			case <-t.stopCh:
 				return
 
 			case <-t.ticker.C:
+
 				// if the timer is active increment seconds
 				// and send seconds to updateCh
 				if t.active {

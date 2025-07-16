@@ -15,14 +15,14 @@ func main() {
 	fmt.Println("App started")
 	fmt.Print("Enter Command:")
 
-	myTimer := timer.NewLimited(5)
+	myTimer := timer.NewPomodoro()
 
 	myTimer.Start()
 
 	var wg sync.WaitGroup
 	wg.Add(2)
 
-	live := false
+	live := true
 
 	go func() {
 		defer wg.Done()
