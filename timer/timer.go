@@ -7,44 +7,68 @@ import (
 
 type Timer struct {
 	stop    chan bool
-	Limit   int
-	Elapsed int
-	Paused  bool
+	limit   int
+	elapsed int
+	paused  bool
+	ticker  *time.Ticker
+}
+
+func NewTimer() *Timer {
+	return &Timer{
+		stop:   make(chan bool),
+		paused: false,
+	}
+}
+
+func NewLimitedTimer(limit int) *Timer {
+	return &Timer{
+		stop:   make(chan bool),
+		limit:  limit,
+		paused: false,
+	}
 }
 
 func (t *Timer) GetElapsedTime() int {
-	return t.Elapsed
+	return t.elapsed
 }
 
 func (t *Timer) Pause() {
-	t.Paused = true
+	t.paused = true
 }
 
 func (t *Timer) Resume() {
-	t.Paused = false
+	t.paused = false
 }
 
 func (t *Timer) Stop() {
 	t.stop <- true
 }
 
+func (t *Timer) GetTickerChan() <-chan time.Time {
+	return t.ticker.C
+}
+
+func (t *Timer) GetStopChan() <-chan bool {
+	return t.stop
+}
+
 func (t *Timer) Update() {
-	t.stop = make(chan bool)
-	ticker := time.NewTicker(time.Second)
+	defer close(t.stop)
+	t.ticker = time.NewTicker(time.Second)
 	for {
-		if !t.Paused {
+		if !t.paused {
 			select {
-			case <-ticker.C:
-				t.Elapsed++
-				fmt.Printf("Time since: %d\n", t.Elapsed)
+			case <-t.ticker.C:
+				t.elapsed++
+				fmt.Printf("Time since: %d\n", t.elapsed)
 			case <-t.stop:
-				ticker = nil
+				t.ticker = nil
 				return
 			}
 		}
 
-		if t.Elapsed >= t.Limit {
-			ticker = nil
+		if t.elapsed >= t.limit && t.limit != 0 {
+			t.ticker = nil
 			return
 		}
 	}
