@@ -10,14 +10,8 @@ const (
 	LongRest
 )
 
-type pomoTimers struct {
-	work      *Timer
-	shortRest *Timer
-	longRest  *Timer
-}
-
 type Pomodoro struct {
-	timers *pomoTimers
+	timers map[pomoState]*Timer
 	stop   chan bool
 	state  pomoState
 	cycles int
@@ -26,14 +20,27 @@ type Pomodoro struct {
 
 func NewPomodoro() *Pomodoro {
 	return &Pomodoro{
-		timers: &pomoTimers{
-			work:      NewLimitedTimer(20),
-			shortRest: NewLimitedTimer(5),
-			longRest:  NewLimitedTimer(30),
+		timers: map[pomoState]*Timer{
+			Work:      NewLimitedTimer(20),
+			ShortRest: NewLimitedTimer(5),
+			LongRest:  NewLimitedTimer(30),
 		},
 		stop:  make(chan bool),
 		state: Work,
 	}
+}
+
+func (p *Pomodoro) Pause() {
+	p.timers[p.state].Pause()
+}
+
+func (p *Pomodoro) Resume() {
+	p.timers[p.state].Resume()
+}
+
+func (p *Pomodoro) Stop() {
+	p.stop <- true
+
 }
 
 func (p *Pomodoro) Update() {
@@ -44,16 +51,21 @@ func (p *Pomodoro) Update() {
 		defer wg.Done()
 
 		for {
+			select {
+			case <-p.stop:
+				p.timers[p.state].Stop()
+				return
+			default:
+			}
+			p.timers[p.state].Update()
 			switch p.state {
 			case Work:
-				p.timers.work.Update()
-				p.total += p.timers.work.GetElapsedTime()
-				p.timers.work = NewLimitedTimer(20)
+				p.total += p.timers[p.state].GetElapsedTime()
+				p.timers[p.state] = NewLimitedTimer(20)
 				p.state = ShortRest
 				continue
 			case ShortRest:
-				p.timers.shortRest.Update()
-				p.timers.shortRest = NewLimitedTimer(5)
+				p.timers[p.state] = NewLimitedTimer(5)
 				if p.cycles == 3 {
 					p.state = LongRest
 					continue
@@ -62,7 +74,6 @@ func (p *Pomodoro) Update() {
 				p.state = Work
 				continue
 			case LongRest:
-				p.timers.longRest.Update()
 				return
 			}
 
