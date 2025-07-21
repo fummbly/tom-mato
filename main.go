@@ -11,7 +11,7 @@ func main() {
 
 	fmt.Println("App started")
 
-	p := timer.NewPomodoro()
+	p := timer.NewPomodoro(20, 5, 30)
 
 	go p.Update()
 
@@ -21,10 +21,6 @@ func main() {
 
 	time.Sleep(4 * time.Second)
 
-	p.Resume()
-
-	time.Sleep(10 * time.Second)
-
-	p.Stop()
+	fmt.Println("\nApp Stopped")
 
 }

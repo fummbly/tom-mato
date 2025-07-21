@@ -28,10 +28,6 @@ func NewLimitedTimer(limit int) *Timer {
 	}
 }
 
-func (t *Timer) GetElapsedTime() int {
-	return t.elapsed
-}
-
 func (t *Timer) Pause() {
 	t.paused = true
 }
@@ -52,6 +48,17 @@ func (t *Timer) GetStopChan() <-chan bool {
 	return t.stop
 }
 
+func (t *Timer) GetElapsedTime() int {
+	return t.elapsed
+}
+
+func (t Timer) PrintTimeRemaining() {
+	timeRemaining := t.limit - t.elapsed
+	minutes := timeRemaining / 60
+	seconds := timeRemaining - (minutes * 60)
+	fmt.Printf("\r%02d:%02d", minutes, seconds)
+}
+
 func (t *Timer) Update() {
 	defer close(t.stop)
 	t.ticker = time.NewTicker(time.Second)
@@ -60,7 +67,7 @@ func (t *Timer) Update() {
 			select {
 			case <-t.ticker.C:
 				t.elapsed++
-				fmt.Printf("Time since: %d\n", t.elapsed)
+				t.PrintTimeRemaining()
 			case <-t.stop:
 				t.ticker = nil
 				return
