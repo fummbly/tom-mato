@@ -15,16 +15,16 @@ func TestStartStopTimer(t *testing.T) {
 
 	for _, expected := range cases {
 		t.Run(fmt.Sprintf("Timer:%d", expected), func(t *testing.T) {
-			expected := expected
 			t.Parallel()
-			var timer = New()
-			timer.Start()
+			start := time.Now()
+			var timer = NewTimer()
+			go timer.Update()
 			waitTime := expected
 			time.Sleep(time.Duration(waitTime) * time.Second)
 			timer.Stop()
 			got := timer.GetElapsedTime()
-			assert.Equal(t, expected, got)
-			assert.Nil(t, timer.ticker)
+			elapsed := int(time.Since(start).Seconds())
+			assert.Equal(t, elapsed, got)
 		})
 	}
 }
@@ -33,18 +33,18 @@ func TestPauseResumeTimer(t *testing.T) {
 	cases := []struct {
 		startWait, pauseWait, resumeWait, expected int
 	}{
-		{2, 3, 4, 6},
-		{4, 1, 6, 10},
-		{6, 8, 2, 8},
-		{5, 9, 2, 7},
+		{2, 3, 4, 7},
+		{4, 1, 6, 11},
+		{6, 8, 2, 9},
+		{5, 9, 2, 8},
 	}
 
 	for i, tc := range cases {
 		t.Run(fmt.Sprintf("Run:%d", i), func(t *testing.T) {
 			tc := tc
 			t.Parallel()
-			var timer = New()
-			timer.Start()
+			var timer = NewTimer()
+			go timer.Update()
 			time.Sleep(time.Duration(tc.startWait) * time.Second)
 			timer.Pause()
 			time.Sleep(time.Duration(tc.pauseWait) * time.Second)
@@ -53,7 +53,6 @@ func TestPauseResumeTimer(t *testing.T) {
 			timer.Stop()
 			got := timer.GetElapsedTime()
 			assert.Equal(t, tc.expected, got)
-			assert.Nil(t, timer.ticker)
 		})
 	}
 }

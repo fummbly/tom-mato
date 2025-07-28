@@ -1,6 +1,9 @@
 package timer
 
-import "sync"
+import (
+	"fmt"
+	"sync"
+)
 
 type pomoState int
 
@@ -9,6 +12,12 @@ const (
 	ShortRest
 	LongRest
 )
+
+var stateNames = map[pomoState]string{
+	Work:      "work",
+	ShortRest: "short rest",
+	LongRest:  "long rest",
+}
 
 type Pomodoro struct {
 	timers    map[pomoState]*Timer
@@ -41,7 +50,7 @@ func (p *Pomodoro) Resume() {
 }
 
 func (p *Pomodoro) Stop() {
-	p.stop <- true
+	p.timers[p.state].Stop()
 
 }
 
@@ -57,12 +66,7 @@ func (p *Pomodoro) Update() {
 		defer wg.Done()
 
 		for {
-			select {
-			case <-p.stop:
-				p.timers[p.state].Stop()
-				return
-			default:
-			}
+			fmt.Printf("\r%v\n", stateNames[p.state])
 			p.timers[p.state].Update()
 			switch p.state {
 			case Work:
@@ -82,6 +86,7 @@ func (p *Pomodoro) Update() {
 			case LongRest:
 				return
 			}
+			return
 
 		}
 

@@ -37,7 +37,7 @@ func (t *Timer) Resume() {
 }
 
 func (t *Timer) Stop() {
-	t.stop <- true
+	t.ticker.Stop()
 }
 
 func (t *Timer) GetTickerChan() <-chan time.Time {
@@ -54,6 +54,9 @@ func (t *Timer) GetElapsedTime() int {
 
 func (t Timer) PrintTimeRemaining() {
 	timeRemaining := t.limit - t.elapsed
+	if t.limit == 0 {
+		timeRemaining = t.elapsed
+	}
 	minutes := timeRemaining / 60
 	seconds := timeRemaining - (minutes * 60)
 	fmt.Printf("\r%02d:%02d", minutes, seconds)
@@ -69,13 +72,11 @@ func (t *Timer) Update() {
 				t.elapsed++
 				t.PrintTimeRemaining()
 			case <-t.stop:
-				t.ticker = nil
 				return
 			}
 		}
 
 		if t.elapsed >= t.limit && t.limit != 0 {
-			t.ticker = nil
 			return
 		}
 	}
