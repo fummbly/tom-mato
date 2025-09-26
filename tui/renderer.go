@@ -2,7 +2,10 @@ package tui
 
 import (
 	"bytes"
+	"fmt"
 	"io"
+	"os/exec"
+	"runtime"
 	"strings"
 	"sync"
 	"time"
@@ -14,9 +17,9 @@ const (
 )
 
 type renderer interface {
-	start()
-	stop()
-	write(string)
+	Start()
+	Stop()
+	Write(string)
 }
 
 type standardRenderer struct {
@@ -34,7 +37,7 @@ type standardRenderer struct {
 	once               sync.Once
 }
 
-func newRenderer(out io.Writer, fps int) renderer {
+func NewRenderer(out io.Writer, fps int) renderer {
 
 	if fps < 1 {
 		fps = defaultFPS
@@ -52,7 +55,7 @@ func newRenderer(out io.Writer, fps int) renderer {
 	return r
 }
 
-func (r *standardRenderer) start() {
+func (r *standardRenderer) Start() {
 	if r.ticker == nil {
 		r.ticker = time.NewTicker(r.framerate)
 	} else {
@@ -64,7 +67,7 @@ func (r *standardRenderer) start() {
 	go r.listen()
 }
 
-func (r *standardRenderer) stop() {
+func (r *standardRenderer) Stop() {
 	r.once.Do(func() {
 		r.done <- struct{}{}
 	})
@@ -90,6 +93,26 @@ func (r *standardRenderer) listen() {
 
 }
 
+func (r *standardRenderer) clearScreen() {
+	var cmd *exec.Cmd
+	switch runtime.GOOS {
+	case "windows":
+		cmd = exec.Command("cmd", "/c", "cls")
+	default:
+		cmd = exec.Command("clear")
+	}
+	cmd.Stdout = r.out
+	cmd.Run()
+}
+
+func (r *standardRenderer) clearLine() {
+	r.out.Write([]byte("\033[2K\r"))
+}
+
+func (r *standardRenderer) upLine() {
+	r.out.Write([]byte("\033[1A"))
+}
+
 func (r *standardRenderer) flush() {
 	r.mtx.Lock()
 	defer r.mtx.Unlock()
@@ -105,6 +128,7 @@ func (r *standardRenderer) flush() {
 	flushQueuedMessages := len(r.queuedMessageLines) > 0
 
 	if flushQueuedMessages {
+		fmt.Println("Writing queued messages")
 		for _, line := range r.queuedMessageLines {
 			buf.WriteString(line)
 			buf.WriteString("\r\n")
@@ -118,6 +142,8 @@ func (r *standardRenderer) flush() {
 		if i == 0 && r.lastRender == "" {
 			buf.WriteString("\r")
 		}
+
+		r.clearLine()
 
 		line := newLines[i]
 
@@ -137,7 +163,7 @@ func (r *standardRenderer) flush() {
 
 }
 
-func (r *standardRenderer) write(s string) {
+func (r *standardRenderer) Write(s string) {
 	r.mtx.Lock()
 	defer r.mtx.Unlock()
 
